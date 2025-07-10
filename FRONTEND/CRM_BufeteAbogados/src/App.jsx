@@ -3,6 +3,8 @@ import Home from './page/Home';
 import Clientes from './page/Clientes';
 import Login from './page/Login';
 import RutaProtegida from './components/RutaProtegida';
+import Cuenta from './page/Cuenta';
+import Pagos from './page/Pagos'; 
 
 function App() {
   return (
@@ -23,6 +25,22 @@ function App() {
           element={
             <RutaProtegida>
               <Clientes />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/cuenta"
+          element={
+            <RutaProtegida>
+              <Cuenta />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/pagos"
+          element={
+            <RutaProtegida>
+              <Pagos />
             </RutaProtegida>
           }
         />

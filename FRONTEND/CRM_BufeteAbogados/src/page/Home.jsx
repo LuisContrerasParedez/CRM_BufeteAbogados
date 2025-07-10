@@ -2,36 +2,54 @@ import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Flex,
+  Container,
   Heading,
   Text,
   Button,
   SimpleGrid,
-  Icon,
   useBreakpointValue,
+  useColorModeValue,
 } from '@chakra-ui/react';
-import { FiLogOut, FiUserPlus, FiUsers, FiSettings } from 'react-icons/fi';
+import { FiLogOut, FiUserPlus, FiCreditCard } from 'react-icons/fi';
 
 export default function Home() {
   const navigate = useNavigate();
 
-  const cerrarSesion = () => {
-    localStorage.clear();
-    navigate('/login');
-  };
+  // Paleta sobria para bufete
+  const bg = useColorModeValue('#F7F7F7', 'gray.800');
+  const headerBg = useColorModeValue('#2A4365', 'gray.900');
+  const cardBg = useColorModeValue('white', 'gray.700');
+  const footerBg = useColorModeValue('#EDF2F7', 'gray.900');
+  const textColor = useColorModeValue('gray.700', 'gray.200');
 
-  // Paleta de colores tipo bufete
-  const bg = '#F7F1ED';
-  const headerBg = '#8B5E3C';
-  const cardBg = '#FFFFFF';
-  const accent = '#8B5E3C';
-  const accentHover = '#A06B46';
-  const footerBg = '#EAE4DC';
+  const accent = '#D69E2E';
+  const accentHover = '#B97D0D';
 
-  // Responsive columns
-  const columns = useBreakpointValue({ base: 1, md: 2, lg: 3 });
+  const columns = useBreakpointValue({ base: 1, sm: 2, md: 3 });
+
+  const modules = [
+    {
+      icon: FiUserPlus,
+      title: 'Clientes',
+      desc: 'Registra un cliente en el sistema',
+      route: '/clientes',
+    },
+    {
+      icon: FiCreditCard,
+      title: 'Crear Cuenta',
+      desc: 'Abre una nueva cuenta para un cliente',
+      route: '/cuenta',
+    },
+    {
+      icon: null,         // Aquí no usamos icon
+      title: 'Ingresar Pagos',
+      desc: 'Pago de intereses y abono a capital',
+      route: '/pagos',
+    },
+  ];
 
   return (
-    <Flex direction="column" minH="100vh" bg={bg}>
+    <Flex direction="column" minH="100vh" bg={bg} color={textColor}>
       {/* HEADER */}
       <Flex
         as="header"
@@ -39,121 +57,115 @@ export default function Home() {
         color="white"
         align="center"
         justify="space-between"
-        px={[4, 8]}
         py={4}
-        boxShadow="md"
+        px={{ base: 4, md: 8 }}
+        boxShadow="sm"
       >
         <Box>
-          <Heading size="md">CRM Bufete Abogados</Heading>
-          <Text fontSize="sm">Administración sencilla y profesional</Text>
+          <Heading
+            fontSize={{ base: 'lg', md: '2xl' }}
+            letterSpacing="wide"
+            fontWeight="semibold"
+          >
+            NEGOCIOS REALES S.A
+          </Heading>
+          <Text fontSize="sm" opacity={0.8}>
+            Administración profesional
+          </Text>
         </Box>
         <Button
           leftIcon={<FiLogOut />}
           variant="outline"
           borderColor="whiteAlpha.700"
-          color="white"
           _hover={{ bg: 'whiteAlpha.200' }}
-          onClick={cerrarSesion}
           size="sm"
+          onClick={() => {
+            localStorage.clear();
+            navigate('/login');
+          }}
         >
           Cerrar Sesión
         </Button>
       </Flex>
 
-      {/* MAIN CONTENT */}
-      <Box as="main" flex="1" px={[4, 8]} py={10}>
-        <Heading mb={6} color={accent} textAlign="center">
-          Panel Principal
+      {/* MAIN */}
+      <Container maxW="container.xl" flex="1" py={12}>
+        <Heading
+          textAlign="center"
+          color={accent}
+          fontSize={{ base: '2xl', md: '4xl' }}
+          mb={2}
+        >
+          Panel de Control
         </Heading>
-        <Text mb={10} textAlign="center" color="gray.600">
+        <Text textAlign="center" mb={10} color="gray.600">
           Selecciona una opción para comenzar
         </Text>
 
         <SimpleGrid columns={columns} spacing={8}>
-          {/* Tarjeta: Nuevo Cliente */}
-          <Box
-            bg={cardBg}
-            p={6}
-            borderRadius="xl"
-            boxShadow="lg"
-            _hover={{ transform: 'translateY(-4px)', boxShadow: 'xl' }}
-            transition="all 0.2s"
-            textAlign="center"
-          >
-            <Icon as={FiUserPlus} boxSize={10} color={accent} mb={4} />
-            <Heading size="md" mb={2}>
-              Nuevo Cliente
-            </Heading>
-            <Text mb={4} color="gray.500">
-              Registra un cliente en el sistema
-            </Text>
-            <Button
-              mt="auto"
-              leftIcon={<FiUserPlus />}
-              bg={accent}
-              color="white"
-              _hover={{ bg: accentHover }}
-              onClick={() => navigate('/clientes')}
+          {modules.map(({ icon: IconComp, title, desc, route }) => (
+            <Box
+              key={title}
+              bg={cardBg}
+              rounded="lg"
+              shadow="md"
+              p={6}
+              role="group"
+              display="flex"
+              flexDirection="column"
+              transition="all 0.3s"
+              _hover={{
+                shadow: 'xl',
+                transform: 'translateY(-4px)',
+              }}
             >
-              Ingresar
-            </Button>
-          </Box>
+              {/* Icono o Q */}
+              {title === 'Ingresar Pagos' ? (
+                <Text
+                  fontSize="4xl"
+                  mb={4}
+                  color={accent}
+                  _groupHover={{ color: accentHover }}
+                  textAlign="center"
+                >
+                  Q
+                </Text>
+              ) : (
+                <Box
+                  as={IconComp}
+                  boxSize={10}
+                  mb={4}
+                  color={accent}
+                  _groupHover={{ color: accentHover }}
+                  mx="auto"
+                />
+              )}
 
-          {/* Tarjeta: Lista de Clientes */}
-          <Box
-            bg={cardBg}
-            p={6}
-            borderRadius="xl"
-            boxShadow="lg"
-            opacity={0.6}
-            cursor="not-allowed"
-            textAlign="center"
-          >
-            <Icon as={FiUsers} boxSize={10} color="gray.400" mb={4} />
-            <Heading size="md" mb={2} color="gray.600">
-              Lista de Clientes
-            </Heading>
-            <Text mb={4} color="gray.500">
-              Disponible próximamente
-            </Text>
-            <Button size="sm" variant="outline" isDisabled>
-              Pronto
-            </Button>
-          </Box>
-
-          {/* Tarjeta: Ajustes del Sistema */}
-          <Box
-            bg={cardBg}
-            p={6}
-            borderRadius="xl"
-            boxShadow="lg"
-            opacity={0.6}
-            cursor="not-allowed"
-            textAlign="center"
-          >
-            <Icon as={FiSettings} boxSize={10} color="gray.400" mb={4} />
-            <Heading size="md" mb={2} color="gray.600">
-              Ajustes del Sistema
-            </Heading>
-            <Text mb={4} color="gray.500">
-              Disponible próximamente
-            </Text>
-            <Button size="sm" variant="outline" isDisabled>
-              Pronto
-            </Button>
-          </Box>
+              <Heading fontSize="xl" mb={2} textAlign="center">
+                {title}
+              </Heading>
+              <Text flex="1" textAlign="center" color="gray.500" mb={4}>
+                {desc}
+              </Text>
+              <Button
+                alignSelf="center"
+                px={8}
+                borderRadius="full"
+                bg={accent}
+                color="white"
+                _hover={{ bg: accentHover }}
+                onClick={() => navigate(route)}
+              >
+                Ir a {title}
+              </Button>
+            </Box>
+          ))}
         </SimpleGrid>
-      </Box>
+      </Container>
 
       {/* FOOTER */}
-      <Box
-        as="footer"
-        bg={footerBg}
-        borderTop="1px solid #D6CFC7"
-        py={4}
-        textAlign="center"
-      >
-        <Text fontSize="sm" color="gray.700">
+      <Box as="footer" bg={footerBg} py={4} textAlign="center">
+        <Text fontSize="sm" color="gray.600">
           © 2025 Bufete Abogados CRM — Diseñado para facilitar el trabajo diario
         </Text>
       </Box>

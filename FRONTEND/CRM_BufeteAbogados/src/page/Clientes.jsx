@@ -110,7 +110,7 @@ export default function Clientes() {
         top="0"
         zIndex="10"
       >
-        <Heading size="lg">📋 Gestión de Clientes</Heading>
+        <Heading size="lg">📋 Clientes Negocios Reales</Heading>
         <Flex gap={3}>
           <Button
             leftIcon={<FiArrowLeft />}
