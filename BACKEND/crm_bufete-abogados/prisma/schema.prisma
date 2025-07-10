@@ -8,9 +8,76 @@ datasource db {
 }
 
 model Cliente {
-  id             Int      @id @default(autoincrement())
+  id             Int       @id @default(autoincrement())
   nombre         String
   apellido       String
   telefono       Int
-  fecha_registro DateTime @default(now())
+  fecha_registro DateTime  @default(now())
+
+  cuentas        Cuenta[]  // Relación 1:N con Cuenta
 }
+
+model Usuario {
+  id             Int       @id @default(autoincrement())
+  nombre         String
+  contrasena     String
+  activo         Boolean   @default(true)
+  fecha_registro DateTime  @default(now())
+  actualizado_en DateTime  @updatedAt
+}
+
+/// ¿Préstamo o renta?
+enum CuentaTipo {
+  PRESTAMO
+  RENTA
+}
+
+/// Para clasificar cada pago
+enum PagoTipo {
+  INTERES
+  ABONO_CAPITAL
+  PAGO_RENTA    // pago mensual o por N meses de la renta
+}
+
+model Cuenta {
+  id              Int        @id @default(autoincrement())
+  numeroEscritura String
+  tipo            CuentaTipo 
+  monto           Decimal    @db.Decimal(10,2)
+  interes         Decimal?   @db.Decimal(5,2)  // sólo para PRÉSTAMO
+  fechaRegistro   DateTime   @default(now())
+
+  cliente         Cliente    @relation(fields: [clienteId], references: [id])
+  clienteId       Int
+
+  pagos           Pago[]     // todos los pagos (intereses, abonos, rentas)
+  contratoRenta   Renta?     // si tipo = RENTA, datos del contrato
+}
+
+model Pago {
+  id             Int        @id @default(autoincrement())
+  cuenta         Cuenta     @relation(fields: [cuentaId], references: [id])
+  cuentaId       Int
+  tipo           PagoTipo
+  monto          Decimal    @db.Decimal(10,2)
+  fechaPago      DateTime   @default(now())
+  CantMeses      Int?         
+  saldoPendiente Decimal    @db.Decimal(10,2) // saldo tras aplicar este pago
+
+  // Si el pago es de renta, podemos vincularlo al contrato:
+  renta          Renta?     @relation(fields: [rentaId], references: [id])
+  rentaId        Int?
+}
+
+/// Datos del contrato de renta (duración y monto mensual)
+model Renta {
+  id           Int      @id @default(autoincrement())
+  cuenta       Cuenta   @relation(fields: [cuentaId], references: [id])
+  cuentaId     Int      @unique
+
+  fechaInicio  DateTime // inicio del contrato
+  montoMensual Decimal  @db.Decimal(10,2)
+
+  pagos        Pago[]   // todos los pagos de renta asociados
+}
+
