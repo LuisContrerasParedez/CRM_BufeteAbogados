@@ -1,10 +1,10 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const API = 'http://localhost:3000/pagos';
+const API = 'http://localhost:3000/rentas';
 
-export const fetchPagos = createAsyncThunk(
-  'pagos/fetchAll',
+export const fetchRentas = createAsyncThunk(
+  'rentas/fetchAll',
   async (_, { rejectWithValue }) => {
     try {
       const { data } = await axios.get(API);
@@ -15,8 +15,8 @@ export const fetchPagos = createAsyncThunk(
   }
 );
 
-export const fetchPago = createAsyncThunk(
-  'pagos/fetchOne',
+export const fetchRenta = createAsyncThunk(
+  'rentas/fetchOne',
   async (id, { rejectWithValue }) => {
     try {
       const { data } = await axios.get(`${API}/${id}`);
@@ -27,11 +27,11 @@ export const fetchPago = createAsyncThunk(
   }
 );
 
-export const createPago = createAsyncThunk(
-  'pagos/create',
-  async (pago, { rejectWithValue }) => {
+export const createRenta = createAsyncThunk(
+  'rentas/create',
+  async (renta, { rejectWithValue }) => {
     try {
-      const { data } = await axios.post(API, pago);
+      const { data } = await axios.post(API, renta);
       return data;
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
@@ -39,8 +39,8 @@ export const createPago = createAsyncThunk(
   }
 );
 
-export const updatePago = createAsyncThunk(
-  'pagos/update',
+export const updateRenta = createAsyncThunk(
+  'rentas/update',
   async ({ id, changes }, { rejectWithValue }) => {
     try {
       const { data } = await axios.patch(`${API}/${id}`, changes);
@@ -51,8 +51,8 @@ export const updatePago = createAsyncThunk(
   }
 );
 
-export const deletePago = createAsyncThunk(
-  'pagos/delete',
+export const deleteRenta = createAsyncThunk(
+  'rentas/delete',
   async (id, { rejectWithValue }) => {
     try {
       await axios.delete(`${API}/${id}`);

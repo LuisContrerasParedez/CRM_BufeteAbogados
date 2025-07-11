@@ -7,6 +7,7 @@ import {
   updateCuenta,
   deleteCuenta,
 } from '../store/cuentas/thunks'
+import { rentasThunks } from '../store/Renta'
 import { fetchClientes } from '../store/clientes/thunks'
 import {
   Box,
@@ -33,7 +34,7 @@ import {
   NumberInput,
   NumberInputField,
   HStack,
-  Stack,
+  VStack,
   Grid,
   GridItem,
   Avatar,
@@ -53,21 +54,31 @@ export default function Cuenta() {
   // Tema responsivo
   const bg = useBreakpointValue({ base: 'gray.50', md: 'white' })
   const headerBg = useBreakpointValue({ base: 'blue.600', md: 'blue.700' })
-  const textColor = useBreakpointValue({ base: 'white', md: 'white' })
+  const textColor = 'white'
 
-  const [form, setForm] = useState({ numeroEscritura: '', tipo: 'PRESTAMO', monto: '', clienteId: '' })
+  // Estado del formulario
+  const [form, setForm] = useState({
+    numeroEscritura: '',
+    tipo: 'PRESTAMO',
+    monto: '',       // Monto para préstamo
+    interes: '',     // Interés para préstamo
+    clienteId: '',
+    fechaInicio: '', // Fecha de inicio para renta
+    montoMensual: '' // Monto mensual para renta
+  })
   const [editId, setEditId] = useState(null)
   const [search, setSearch] = useState('')
   const [showAll, setShowAll] = useState(false)
 
-  const { items: cuentas, loading: loadingCuentas } = useSelector(state => state.cuentas)
-  const { clientes, loading: loadingClientes } = useSelector(state => state.cliente)
+  const { items: cuentas, loading: loadingCuentas } = useSelector(s => s.cuentas)
+  const { clientes, loading: loadingClientes } = useSelector(s => s.cliente)
 
   useEffect(() => {
     dispatch(fetchCuentas())
     dispatch(fetchClientes())
   }, [dispatch])
 
+  // Filtrado y búsqueda
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
     if (!term) return []
@@ -89,104 +100,119 @@ export default function Cuenta() {
     return cli ? `${cli.nombre} ${cli.apellido}` : '-'
   }
 
-  const handleOpenNew = () => {
+  // Abrir modal para nueva cuenta
+  const openNew = () => {
     setEditId(null)
-    setForm({ numeroEscritura: '', tipo: 'PRESTAMO', monto: '', clienteId: '' })
+    setForm({ numeroEscritura: '', tipo: 'PRESTAMO', monto: '', interes: '', clienteId: '', fechaInicio: '', montoMensual: '' })
     onOpen()
   }
 
-  const handleOpenEdit = c => {
+  // Abrir modal para editar cuenta
+  const openEdit = c => {
     setEditId(c.id)
     setForm({
       numeroEscritura: c.numeroEscritura,
       tipo: c.tipo,
-      monto: String(c.monto),
-      clienteId: String(c.clienteId || c.cliente?.id || ''),
+      monto: c.tipo === 'PRESTAMO' ? String(c.monto) : '',
+      interes: c.tipo === 'PRESTAMO' && c.interes != null ? String(c.interes) : '',
+      clienteId: String(c.clienteId),
+      fechaInicio: c.tipo === 'RENTA' ? c.contratoRenta?.fechaInicio?.substring(0, 10) || '' : '',
+      montoMensual: c.tipo === 'RENTA' && c.contratoRenta?.montoMensual ? String(c.contratoRenta.montoMensual) : ''
     })
     onOpen()
   }
 
+  // Enviar formulario
   const handleSubmit = async () => {
     try {
       const payload = {
         numeroEscritura: form.numeroEscritura.trim(),
         tipo: form.tipo,
-        monto: parseFloat(form.monto),
         clienteId: parseInt(form.clienteId, 10),
+        // Para préstamo
+        ...(form.tipo === 'PRESTAMO' && {
+          monto: parseFloat(form.monto),
+          interes: parseFloat(form.interes)
+        }),
+        // Para renta usamos montoMensual como monto
+        ...(form.tipo === 'RENTA' && { monto: parseFloat(form.montoMensual) })
       }
+
+      let cuentaRes
       if (editId) {
-        await dispatch(updateCuenta({ id: editId, ...payload })).unwrap()
+        cuentaRes = await dispatch(updateCuenta({ id: editId, ...payload })).unwrap()
         toast({ status: 'success', title: 'Cuenta actualizada' })
       } else {
-        await dispatch(createCuenta(payload)).unwrap()
+        cuentaRes = await dispatch(createCuenta(payload)).unwrap()
         toast({ status: 'success', title: 'Cuenta creada' })
       }
+
+      // Si es renta, crear/actualizar contrato de renta
+      if (form.tipo === 'RENTA') {
+        const rentaData = {
+          cuentaId: cuentaRes.id,
+          fechaInicio: form.fechaInicio,
+          montoMensual: parseFloat(form.montoMensual)
+        }
+        if (editId && cuentaRes.contratoRenta) {
+          await dispatch(rentasThunks.updateRenta({ id: cuentaRes.contratoRenta.id, changes: rentaData })).unwrap()
+          toast({ status: 'success', title: 'Contrato de renta actualizado' })
+        } else {
+          await dispatch(rentasThunks.createRenta(rentaData)).unwrap()
+          toast({ status: 'success', title: 'Contrato de renta creado' })
+        }
+      }
+
       onClose()
+      dispatch(fetchCuentas())
     } catch (e) {
       toast({ status: 'error', title: 'Error', description: e.message })
     }
   }
 
+  // Eliminar cuenta
   const handleDelete = async id => {
     try {
       await dispatch(deleteCuenta(id)).unwrap()
       toast({ status: 'info', title: 'Cuenta eliminada' })
-    } catch (e) {
-      toast({
-        status: 'error',
-        title: 'No se puede eliminar',
-        description: 'La cuenta tiene pagos o rentas asociadas.',
-        duration: 8000,
-        isClosable: true,
-      })
+    } catch {
+      toast({ status: 'error', title: 'No se puede eliminar', description: 'Asociaciones existentes.', duration: 8000, isClosable: true })
     }
   }
 
-  if (loadingCuentas || loadingClientes) {
-    return (
-      <Flex justify="center" align="center" h="60vh">
-        <Text>Cargando cuentas...</Text>
-      </Flex>
-    )
-  }
+  if (loadingCuentas || loadingClientes) return <Flex justify="center" align="center" h="60vh"><Text>Cargando cuentas...</Text></Flex>
 
   return (
     <Flex direction="column" minH="100vh" bg={bg}>
-      {/* HEADER con Título y Acciones */}
+      {/* HEADER */}
       <Flex as="header" bg={headerBg} color={textColor} px={6} py={4} align="center" justify="space-between">
         <Box>
           <Heading size="lg">Gestión de Cuentas</Heading>
-          <Text fontSize="sm">Administra préstamos y rentas asignadas</Text>
+          <Text fontSize="sm">Administra Préstamos y Rentas</Text>
         </Box>
         <HStack spacing={2}>
           <IconButton icon={<FiHome />} aria-label="Inicio" variant="ghost" color="white" onClick={() => navigate('/')} />
           <Button leftIcon={<FiList />} variant="outline" colorScheme="whiteAlpha" onClick={() => { setShowAll(true); setSearch('') }}>
             Ver Todas
           </Button>
-          <Button leftIcon={<FiPlus />} colorScheme="yellow" onClick={handleOpenNew}>
+          <Button leftIcon={<FiPlus />} colorScheme="yellow" onClick={openNew}>
             Nueva Cuenta
           </Button>
         </HStack>
       </Flex>
 
       <Container maxW="container.xl" py={6} flex="1">
-        {/* Barra de búsqueda fija */}
+        {/* Search bar */}
         <Flex mb={4} align="center">
           <InputGroup>
             <InputLeftElement pointerEvents="none"><FiSearch color="gray.400" /></InputLeftElement>
-            <Input
-              placeholder="Buscar escritura o cliente..."
-              value={search}
-              onChange={e => { setSearch(e.target.value); setShowAll(false) }}
-            />
+            <Input placeholder="Buscar escritura o cliente..." value={search} onChange={e => { setSearch(e.target.value); setShowAll(false) }} />
           </InputGroup>
         </Flex>
 
-        {/* Resultados en tarjetas */}
+        {/* Cards */}
         {!displayed.length ? (
-          <Flex h="60vh" align="center" justify="center">
-            <Text color="gray.500">Sin resultados. Utiliza el buscador o "Ver Todas".</Text>
-          </Flex>
+          <Flex h="60vh" align="center" justify="center"><Text color="gray.500">Sin resultados.</Text></Flex>
         ) : (
           <Grid templateColumns="repeat(auto-fit, minmax(280px, 1fr))" gap={4}>
             {displayed.map(c => (
@@ -195,12 +221,13 @@ export default function Cuenta() {
                   <Avatar name={getNombreCliente(c)} size="sm" />
                   <Badge colorScheme={c.tipo === 'PRESTAMO' ? 'green' : 'purple'}>{c.tipo}</Badge>
                 </Flex>
-                <Heading size="md" mt={2}> Numero de escritura: {c.numeroEscritura}</Heading>
+                <Heading size="md" mt={2}>{c.numeroEscritura}</Heading>
                 <Text mt={1}>Cliente: {getNombreCliente(c)}</Text>
-                <Text mt={1} fontWeight="bold">Monto: Q{Number(c.monto).toFixed(2)}</Text>
+                {c.tipo === 'PRESTAMO' && <Text mt={1} fontWeight="bold">Monto: Q{Number(c.monto).toFixed(2)}</Text>}
+                {c.tipo === 'RENTA' && c.contratoRenta && <Text mt={1}>Renta Q{Number(c.contratoRenta.montoMensual).toFixed(2)}/mes</Text>}
                 <Divider my={3} />
                 <Flex justify="flex-end">
-                  <Tooltip label="Editar"><IconButton icon={<FiEdit2 />} size="sm" mr={2} onClick={() => handleOpenEdit(c)} /></Tooltip>
+                  <Tooltip label="Editar"><IconButton icon={<FiEdit2 />} size="sm" mr={2} onClick={() => openEdit(c)} /></Tooltip>
                   <Tooltip label="Eliminar"><IconButton icon={<FiTrash2 />} size="sm" colorScheme="red" onClick={() => handleDelete(c.id)} /></Tooltip>
                 </Flex>
               </GridItem>
@@ -209,39 +236,77 @@ export default function Cuenta() {
         )}
       </Container>
 
-      {/* Modal Crear/Editar */}
-      <Modal isOpen={isOpen} onClose={onClose} isCentered>
+      {/* Modal Create/Edit */}
+      <Modal isOpen={isOpen} onClose={onClose} isCentered size="lg">
         <ModalOverlay />
         <ModalContent>
           <ModalHeader>{editId ? 'Editar Cuenta' : 'Nueva Cuenta'}</ModalHeader>
           <ModalBody>
-            <FormControl mb={3} isRequired>
-              <FormLabel>Escritura</FormLabel>
-              <Input value={form.numeroEscritura} onChange={e => setForm(f => ({ ...f, numeroEscritura: e.target.value }))} />
-            </FormControl>
-            <FormControl mb={3} isRequired>
-              <FormLabel>Cliente</FormLabel>
-              <Select placeholder="Selecciona cliente" value={form.clienteId} onChange={e => setForm(f => ({ ...f, clienteId: e.target.value }))}>
-                {clientes.map(cli => <option key={cli.id} value={cli.id}>{`${cli.nombre} ${cli.apellido}`}</option>)}
-              </Select>
-            </FormControl>
-            <FormControl mb={3} isRequired>
-              <FormLabel>Tipo</FormLabel>
-              <Select value={form.tipo} onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))}>
-                <option value="PRESTAMO">PRÉSTAMO</option>
-                <option value="RENTA">RENTA</option>
-              </Select>
-            </FormControl>
-            <FormControl mb={3} isRequired>
-              <FormLabel>Monto</FormLabel>
-              <NumberInput min={0} precision={2} value={form.monto} onChange={(_, val) => setForm(f => ({ ...f, monto: String(val) }))}>
-                <NumberInputField />
-              </NumberInput>
-            </FormControl>
+            <VStack spacing={4} align="stretch">
+              <FormControl isRequired>
+                <FormLabel>Escritura</FormLabel>
+                <Input value={form.numeroEscritura} onChange={e => setForm(f => ({ ...f, numeroEscritura: e.target.value }))} />
+              </FormControl>
+              <FormControl isRequired>
+                <FormLabel>Cliente</FormLabel>
+                <Select placeholder="Selecciona cliente" value={form.clienteId} onChange={e => setForm(f => ({ ...f, clienteId: e.target.value }))}>
+                  {clientes.map(cli => <option key={cli.id} value={cli.id}>{cli.nombre} {cli.apellido}</option>)}
+                </Select>
+              </FormControl>
+              <FormControl isRequired>
+                <FormLabel>Tipo</FormLabel>
+                <Select value={form.tipo} onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))}>
+                  <option value="PRESTAMO">PRÉSTAMO</option>
+                  <option value="RENTA">RENTA</option>
+                </Select>
+              </FormControl>
+              {/* Campos para Préstamo */}
+              {form.tipo === 'PRESTAMO' && (
+                <>
+                  <FormControl isRequired>
+                    <FormLabel>Monto</FormLabel>
+                    <NumberInput min={0} precision={2} value={form.monto} onChange={(_, val) => setForm(f => ({ ...f, monto: String(val) }))}>
+                      <NumberInputField />
+                    </NumberInput>
+                  </FormControl>
+                  <FormControl isRequired>
+                    <FormLabel>Interés (%)</FormLabel>
+                    <NumberInput min={0} precision={2} value={form.interes} onChange={(_, val) => setForm(f => ({ ...f, interes: String(val) }))}>
+                      <NumberInputField />
+                    </NumberInput>
+                  </FormControl>
+                </>
+              )}
+              {/* Campos para Renta */}
+              {form.tipo === 'RENTA' && (
+                <>
+                  <Divider />
+                  <Text fontWeight="bold">Contrato de Renta</Text>
+                  <FormControl isRequired>
+                    <FormLabel>Fecha de inicio</FormLabel>
+                    <Input type="date" value={form.fechaInicio} onChange={e => setForm(f => ({ ...f, fechaInicio: e.target.value }))} />
+                  </FormControl>
+                  <FormControl isRequired>
+                    <FormLabel>Monto mensual</FormLabel>
+                    <NumberInput min={0} precision={2} value={form.montoMensual} onChange={(_, val) => setForm(f => ({ ...f, montoMensual: String(val) }))}>
+                      <NumberInputField />
+                    </NumberInput>
+                  </FormControl>
+                </>
+              )}
+            </VStack>
           </ModalBody>
           <ModalFooter>
             <Button variant="ghost" mr={3} onClick={onClose}>Cancelar</Button>
-            <Button colorScheme="yellow" onClick={handleSubmit} isDisabled={!form.numeroEscritura || !form.clienteId || !form.monto}>
+            <Button
+              colorScheme="yellow"
+              onClick={handleSubmit}
+              isDisabled={
+                !form.numeroEscritura || !form.clienteId ||
+                (form.tipo === 'PRESTAMO' && (!form.monto || !form.interes)) ||
+                (form.tipo === 'RENTA' && (!form.fechaInicio || !form.montoMensual))
+              }
+            >
               {editId ? 'Guardar' : 'Crear'}
             </Button>
           </ModalFooter>
@@ -250,7 +315,7 @@ export default function Cuenta() {
 
       {/* FOOTER */}
       <Box as="footer" bg="gray.100" py={4} textAlign="center">
-        <Text fontSize="sm" color="gray.600">© 2025 Bufete Abogados CRM</Text>
+        <Text fontSize="sm" color="gray.600">© 2025 Tu Aplicación</Text>
       </Box>
     </Flex>
   )
