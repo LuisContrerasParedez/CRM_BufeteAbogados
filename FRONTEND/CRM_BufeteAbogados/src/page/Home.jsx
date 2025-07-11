@@ -183,7 +183,7 @@ export default function Home() {
       {/* FOOTER */}
       <Box as="footer" bg={footerBg} py={4} textAlign="center">
         <Text fontSize="sm" color="gray.600">
-          © 2025 Bufete Abogados CRM — Diseñado para facilitar el trabajo diario
+          © 2025 Negocios Reales S.A
         </Text>
       </Box>
     </Flex>

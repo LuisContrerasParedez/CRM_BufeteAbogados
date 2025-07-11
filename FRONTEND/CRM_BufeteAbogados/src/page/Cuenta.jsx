@@ -298,7 +298,7 @@ export default function Cuenta() {
 
         {/* Cards */}
         {!displayed.length ? (
-          <Flex h="60vh" align="center" justify="center"><Text color="gray.500">Sin resultados.</Text></Flex>
+          <Flex h="60vh" align="center" justify="center"><Text color="gray.500">Presione "Ver Todas" para ver las cuentas existentes.</Text></Flex>
         ) : (
           <Grid templateColumns="repeat(auto-fit, minmax(280px, 1fr))" gap={4}>
             {displayed.map(c => (
@@ -401,7 +401,7 @@ export default function Cuenta() {
 
       {/* FOOTER */}
       <Box as="footer" bg="gray.100" py={4} textAlign="center">
-        <Text fontSize="sm" color="gray.600">© 2025 Tu Aplicación</Text>
+        <Text fontSize="sm" color="gray.600">© 2025 Negocios Reales S.A</Text>
       </Box>
     </Flex>
   )
