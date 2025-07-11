@@ -45,7 +45,8 @@ export default function Pagos() {
     mesInicio: '',
     mesFin: '',
     rentaId: '',
-    CantMeses: ''
+    CantMeses: '',
+    fechaPago: ''
   })
   const [menuFilter, setMenuFilter] = useState('')
 
@@ -90,7 +91,7 @@ export default function Pagos() {
     [rentas, form.rentaId]
   )
   const montoMensual = selectedRenta ? Number(selectedRenta.montoMensual) : 0
-  const totalRenta = montoMensual * (Number(form.CantMeses) || 0)
+  const totalRenta = montoMensual
   const mesesPagados = useMemo(
     () =>
       pagos
@@ -115,13 +116,7 @@ export default function Pagos() {
       if (form.tipo === 'INTERES') {
         payload.mesInicio = form.mesInicio
         payload.mesFin = form.mesFin
-        payload.CantMeses = Math.max(
-          1,
-          Math.floor(
-            (new Date(form.mesFin) - new Date(form.mesInicio)) /
-              (1000 * 60 * 60 * 24 * 30)
-          ) + 1
-        )
+        payload.CantMeses = contarMesesCompletos(form.mesInicio, form.mesFin)
       }
 
       if (form.tipo === 'ABONO_CAPITAL') {
@@ -133,9 +128,10 @@ export default function Pagos() {
 
       if (form.tipo === 'PAGO_RENTA') {
         payload.rentaId = Number(form.rentaId)
-        payload.CantMeses = Number(form.CantMeses)
-        payload.monto = totalRenta
+        payload.monto = form.monto || montoMensual
+        payload.fechaPago = new Date(`${form.fechaPago}-01`)
       }
+
 
       await dispatch(createPago(payload)).unwrap()
       toast({ status: 'success', title: 'Pago registrado' })
@@ -153,6 +149,48 @@ export default function Pagos() {
       toast({ status: 'error', title: 'Error', description: e.message })
     }
   }
+
+  function contarMesesCompletos(fechaInicio, fechaFin) {
+    const inicio = new Date(fechaInicio)
+    const fin = new Date(fechaFin)
+
+    if (fin < inicio) return 0
+
+    let meses = (fin.getFullYear() - inicio.getFullYear()) * 12 + (fin.getMonth() - inicio.getMonth())
+
+    // Si el día del mes en la fecha final es mayor o igual que el de inicio, cuenta como mes completo
+    if (fin.getDate() >= inicio.getDate()) {
+      meses += 1
+    }
+
+    return Math.max(meses, 1)
+  }
+
+
+  useEffect(() => {
+    if (
+      form.tipo === 'INTERES' &&
+      form.mesInicio &&
+      form.mesFin &&
+      cuenta?.monto &&
+      cuenta?.interes
+    ) {
+      const cantidadMeses = contarMesesCompletos(form.mesInicio, form.mesFin)
+
+const interesMensual = Number(cuenta.interes) / 100
+const montoCalculado = Number(cuenta.monto) * interesMensual * cantidadMeses
+
+
+      setForm(f => ({
+        ...f,
+        CantMeses: cantidadMeses,
+        monto: montoCalculado.toFixed(2)
+      }))
+    }
+  }, [form.mesInicio, form.mesFin, cuenta, form.tipo])
+
+
+
 
   return (
     <Box p={6}>
@@ -254,24 +292,51 @@ export default function Pagos() {
         {/* Campos para INTERÉS */}
         {form.tipo === 'INTERES' && (
           <Stack spacing={2} w="full">
-            <FormControl isRequired>
-              <FormLabel>Mes Inicio</FormLabel>
-              <Input
-                type="month"
-                value={form.mesInicio}
-                onChange={e => handleChange('mesInicio', e.target.value)}
-              />
-            </FormControl>
-            <FormControl isRequired>
-              <FormLabel>Mes Fin</FormLabel>
-              <Input
-                type="month"
-                value={form.mesFin}
-                onChange={e => handleChange('mesFin', e.target.value)}
-              />
-            </FormControl>
+            <Input
+              type="date"
+              value={form.mesInicio}
+              onChange={e => handleChange('mesInicio', e.target.value)}
+            />
+            ...
+            <Input
+              type="date"
+              value={form.mesFin}
+              onChange={e => handleChange('mesFin', e.target.value)}
+            />
+
+
+            {/* Cálculo de monto automáticamente */}
+            {cuenta && form.mesInicio && form.mesFin && (
+              <>
+                <Text>
+                  Interés mensual: {(Number(cuenta.interes)).toFixed(2)}%
+                </Text>
+
+
+                <Text>
+                  Cantidad de meses: {
+                    form.mesInicio && form.mesFin
+                      ? contarMesesCompletos(form.mesInicio, form.mesFin)
+                      : 'N/A'
+                  }
+                </Text>
+
+
+                <FormControl isRequired>
+                  <FormLabel>Monto a pagar</FormLabel>
+                  <NumberInput
+                    value={form.monto}
+                    isReadOnly
+                    precision={2}
+                  >
+                    <NumberInputField />
+                  </NumberInput>
+                </FormControl>
+              </>
+            )}
           </Stack>
         )}
+        a
 
         {/* Campos para ABONO A CAPITAL */}
         {form.tipo === 'ABONO_CAPITAL' && (
@@ -296,37 +361,38 @@ export default function Pagos() {
         {/* Campos para PAGO DE RENTA */}
         {form.tipo === 'PAGO_RENTA' && (
           <Stack spacing={2} w="full">
-            <FormControl isRequired>
+            <FormControl>
               <FormLabel>Contrato de Renta</FormLabel>
-              <Select
-                placeholder="Selecciona renta"
-                value={form.rentaId}
-                onChange={e => handleChange('rentaId', e.target.value)}
-              >
-                {rentas
-                  .filter(r => r.cuentaId === Number(form.cuentaId))
-                  .map(r => (
-                    <option key={r.id} value={r.id}>
-                      Inicio: {r.fechaInicio.substring(0, 7)}
-                    </option>
-                  ))}
-              </Select>
+              <Input
+                isReadOnly
+                value={
+                  selectedRenta
+                    ? `Inicio: ${selectedRenta.fechaInicio.substring(0, 7)}`
+                    : 'No hay renta asociada'
+                }
+              />
             </FormControl>
+
             <FormControl isRequired>
-              <FormLabel>Meses a pagar</FormLabel>
+              <FormLabel>Mes de Pago</FormLabel>
+              <Input
+                type="month"
+                value={form.fechaPago}
+                onChange={(e) => handleChange('fechaPago', e.target.value)}
+              />
+            </FormControl>
+            <Text>Monto mensual: Q{montoMensual.toFixed(2)}</Text>
+            <FormControl isRequired>
+              <FormLabel>Total a pagar</FormLabel>
               <NumberInput
-                min={1}
-                value={form.CantMeses}
-                onChange={(_, v) => handleChange('CantMeses', String(v))}
+                precision={2}
+                min={0}
+                value={form.monto}
+                onChange={(_, value) => handleChange('monto', String(value))}
               >
                 <NumberInputField />
               </NumberInput>
             </FormControl>
-            <Text>Monto mensual: Q{montoMensual.toFixed(2)}</Text>
-            <Text fontWeight="semibold">
-              Total a pagar: Q{totalRenta.toFixed(2)}
-            </Text>
-            <Text>Meses ya pagados: {mesesPagados}</Text>
           </Stack>
         )}
 
@@ -339,7 +405,7 @@ export default function Pagos() {
             !form.tipo ||
             (form.tipo === 'INTERES' && (!form.mesInicio || !form.mesFin)) ||
             (form.tipo === 'ABONO_CAPITAL' && !form.monto) ||
-            (form.tipo === 'PAGO_RENTA' && (!form.rentaId || !form.CantMeses))
+            (form.tipo === 'PAGO_RENTA' && (!form.rentaId || !form.fechaPago))
           }
         >
           Registrar Pago
@@ -369,7 +435,7 @@ export default function Pagos() {
               <Td>{new Date(p.fechaPago).toLocaleDateString()}</Td>
               <Td>
                 {p.tipo === 'INTERES' && (
-                  <>Periodo: {p.mesInicio?.substring(0, 7)} – {p.mesFin?.substring(0, 7)} ({p.CantMeses} meses)</>
+                  <>Periodo: {p.mesInicio?.substring(0, 7)} – {p.mesFin?.substring(0, 7)} ({contarMesesCompletos(p.mesInicio, p.mesFin)} meses)</>
                 )}
                 {p.tipo === 'ABONO_CAPITAL' && (
                   <>Saldo: Q{Number(p.saldoPendiente).toFixed(2)}</>

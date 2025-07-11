@@ -36,7 +36,7 @@ enum CuentaTipo {
 enum PagoTipo {
   INTERES
   ABONO_CAPITAL
-  PAGO_RENTA    // pago mensual o por N meses de la renta
+  PAGO_RENTA    
 }
 
 model Cuenta {
@@ -60,14 +60,24 @@ model Pago {
   cuentaId       Int
   tipo           PagoTipo
   monto          Decimal    @db.Decimal(10,2)
-  fechaPago      DateTime   @default(now())
-  CantMeses      Int?         
-  saldoPendiente Decimal    @db.Decimal(10,2) // saldo tras aplicar este pago
+  fechaRegistro      DateTime   @default(now())
+  Nota           String?
 
-  // Si el pago es de renta, podemos vincularlo al contrato:
+  // Para INTERÉS
+  mesInicio      DateTime?  // fecha (o podrías usar Int mesNumerico) del primer mes cubierto
+  mesFin         DateTime?  // fecha del último mes cubierto
+  fechaPago      DateTime?   @default(now())
+  CantMeses      Int?       
+
+
+  // Para ABONO A CAPITAL
+  saldoPendiente Decimal?    @db.Decimal(10,2) // ya lo tenías
+
+  // Para PAGO_DE_RENTA
   renta          Renta?     @relation(fields: [rentaId], references: [id])
   rentaId        Int?
 }
+
 
 /// Datos del contrato de renta (duración y monto mensual)
 model Renta {
