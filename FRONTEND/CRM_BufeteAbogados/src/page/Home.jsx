@@ -75,9 +75,25 @@ export default function Home() {
         </Box>
         <Button
           leftIcon={<FiLogOut />}
-          variant="outline"
+          variant="ghost"
+          color="white"
+          border="1px solid"
           borderColor="whiteAlpha.700"
-          _hover={{ bg: 'whiteAlpha.200' }}
+          borderRadius="md"
+          px={4}
+          py={2}
+          fontWeight="medium"
+          transition="all 0.2s"
+          _hover={{
+            bg: 'whiteAlpha.200',
+            transform: 'translateY(-2px)',
+            boxShadow: 'md',
+          }}
+          _active={{
+            bg: 'whiteAlpha.300',
+            transform: 'translateY(0)',
+            boxShadow: 'sm',
+          }}
           size="sm"
           onClick={() => {
             localStorage.clear();
@@ -86,6 +102,7 @@ export default function Home() {
         >
           Cerrar Sesión
         </Button>
+
       </Flex>
 
       {/* MAIN */}

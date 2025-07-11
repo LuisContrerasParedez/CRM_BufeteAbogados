@@ -185,20 +185,106 @@ export default function Cuenta() {
   return (
     <Flex direction="column" minH="100vh" bg={bg}>
       {/* HEADER */}
-      <Flex as="header" bg={headerBg} color={textColor} px={6} py={4} align="center" justify="space-between">
+      <Flex
+        as="header"
+        bg={headerBg}
+        color="white"
+        align="center"
+        justify="space-between"
+        py={4}
+        px={{ base: 4, md: 8 }}
+        boxShadow="sm"
+      >
         <Box>
-          <Heading size="lg">Gestión de Cuentas</Heading>
-          <Text fontSize="sm">Administra Préstamos y Rentas</Text>
+          <Heading
+            fontSize={{ base: 'lg', md: '2xl' }}
+            letterSpacing="wide"
+            fontWeight="semibold"
+          >
+            Gestión de Cuentas
+          </Heading>
+          <Text fontSize="sm" opacity={0.8}>
+            Administra Préstamos y Rentas
+          </Text>
         </Box>
-        <HStack spacing={2}>
-          <IconButton icon={<FiHome />} aria-label="Inicio" variant="ghost" color="white" onClick={() => navigate('/')} />
-          <Button leftIcon={<FiList />} variant="outline" colorScheme="whiteAlpha" onClick={() => { setShowAll(true); setSearch('') }}>
+
+        {/* Conservamos tus botones originales */}
+        <HStack spacing={3}>
+          <Tooltip label="Volver al inicio" hasArrow placement="bottom">
+            <IconButton
+              icon={<FiHome />}
+              aria-label="Inicio"
+              variant="ghost"
+              color="white"
+              border="1px solid"
+              borderColor="whiteAlpha.600"
+              borderRadius="md"
+              p={2}
+              transition="all 0.2s"
+              _hover={{
+                bg: 'whiteAlpha.200',
+                transform: 'scale(1.1)',
+              }}
+              _active={{
+                bg: 'whiteAlpha.300',
+                transform: 'scale(1)',
+              }}
+              onClick={() => navigate('/')}
+            />
+          </Tooltip>
+
+          <Button
+            leftIcon={<FiList />}
+            variant="ghost"
+            border="1px solid"
+            borderColor="whiteAlpha.600"
+            color="white"
+            borderRadius="md"
+            px={4}
+            py={2}
+            fontWeight="medium"
+            transition="all 0.2s"
+            _hover={{
+              bg: 'whiteAlpha.200',
+              transform: 'translateY(-1px)',
+            }}
+            _active={{
+              bg: 'whiteAlpha.300',
+              transform: 'translateY(0)',
+            }}
+            onClick={() => {
+              setShowAll(true)
+              setSearch('')
+            }}
+          >
             Ver Todas
           </Button>
-          <Button leftIcon={<FiPlus />} colorScheme="yellow" onClick={openNew}>
+
+          <Button
+            leftIcon={<FiPlus />}
+            colorScheme="yellow"
+            variant="solid"
+            borderRadius="md"
+            px={4}
+            py={2}
+            fontWeight="medium"
+            transition="all 0.2s"
+            _hover={{
+              bg: 'yellow.500',
+              transform: 'translateY(-1px)',
+              boxShadow: 'md',
+            }}
+            _active={{
+              bg: 'yellow.600',
+              transform: 'translateY(0)',
+              boxShadow: 'sm',
+            }}
+            onClick={openNew}
+          >
             Nueva Cuenta
           </Button>
         </HStack>
+
       </Flex>
 
       <Container maxW="container.xl" py={6} flex="1">
@@ -221,7 +307,7 @@ export default function Cuenta() {
                   <Avatar name={getNombreCliente(c)} size="sm" />
                   <Badge colorScheme={c.tipo === 'PRESTAMO' ? 'green' : 'purple'}>{c.tipo}</Badge>
                 </Flex>
-                <Heading size="md" mt={2}>{c.numeroEscritura}</Heading>
+                <Heading size="md" mt={2}>Numero de escritura: {c.numeroEscritura}</Heading>
                 <Text mt={1}>Cliente: {getNombreCliente(c)}</Text>
                 {c.tipo === 'PRESTAMO' && <Text mt={1} fontWeight="bold">Monto: Q{Number(c.monto).toFixed(2)}</Text>}
                 {c.tipo === 'RENTA' && c.contratoRenta && <Text mt={1}>Renta Q{Number(c.contratoRenta.montoMensual).toFixed(2)}/mes</Text>}
